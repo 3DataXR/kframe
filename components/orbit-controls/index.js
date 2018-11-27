@@ -38,6 +38,8 @@ AFRAME.registerComponent('orbit-controls', {
                                             el.sceneEl.renderer.domElement);
 
     this.oldMatrix = new THREE.Matrix4();
+    this.parentOldMatrix = new THREE.Matrix4();
+    this.parentMatrixSaved = false;
 
     this.bindMethods();
     el.sceneEl.addEventListener('enter-vr', this.onEnterVR); 
@@ -62,8 +64,9 @@ AFRAME.registerComponent('orbit-controls', {
     if (!AFRAME.utils.device.checkHeadsetConnected() &&
         !AFRAME.utils.device.isMobile()) { return; }
     this.controls.enabled = false;
-    if (el.hasAttribute('look-controls')) {
-      el.setAttribute('look-controls', 'enabled', true);
+    if (!this.parentMatrixSaved) {
+      this.parentOldMatrix.copy(el.object3D.matrix);
+      this.parentMatrixSaved = true;
     }
     camera = el.getObject3D('camera');
     this.oldMatrix.copy(camera.matrix);
@@ -79,14 +82,16 @@ AFRAME.registerComponent('orbit-controls', {
     if (!AFRAME.utils.device.checkHeadsetConnected() &&
         !AFRAME.utils.device.isMobile()) { return; }
     this.controls.enabled = true;
-    if (el.hasAttribute('look-controls')) {
-      el.setAttribute('look-controls', 'enabled', false);
-    }
+
+    // Correct for A-Frame 0.8.2 bug:
+    this.el.sceneEl.renderer.vr.enabled = false;
 
     camera = el.getObject3D('camera')
+    parent = el.object3D
     camera.matrix.copy(this.oldMatrix);
     camera.matrix.decompose(camera.position, camera.quaternion, camera.scale);
-
+    parent.matrix.copy(this.parentOldMatrix);
+    parent.matrix.decompose(parent.position, parent.quaternion, parent.scale);
   },
 
   bindMethods: function() {
