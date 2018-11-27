@@ -33,12 +33,11 @@ AFRAME.registerComponent('orbit-controls', {
 
   init: function () {
     var el = this.el;
-    var oldPosition;
 
     this.controls = new THREE.OrbitControls(el.getObject3D('camera'),
                                             el.sceneEl.renderer.domElement);
 
-    oldPosition = new THREE.Vector3();
+    this.oldMatrix = new THREE.Matrix4();
 
     this.bindMethods();
     el.sceneEl.addEventListener('enter-vr', this.onEnterVR); 
@@ -58,27 +57,36 @@ AFRAME.registerComponent('orbit-controls', {
 
   onEnterVR: function() {
     var el = this.el;
+    var camera;
 
     if (!AFRAME.utils.device.checkHeadsetConnected() &&
         !AFRAME.utils.device.isMobile()) { return; }
     this.controls.enabled = false;
     if (el.hasAttribute('look-controls')) {
       el.setAttribute('look-controls', 'enabled', true);
-      oldPosition.copy(el.getObject3D('camera').position);
-      el.getObject3D('camera').position.set(0, 0, 0);
     }
+    camera = el.getObject3D('camera');
+    this.oldMatrix.copy(camera.matrix);
+    camera.matrix.identity();
+    camera.matrix.decompose(camera.position, camera.quaternion, camera.scale);
   },
 
   onExitVR: function() {
     var el = this.el;
+    var camera;
+    var parent;
 
     if (!AFRAME.utils.device.checkHeadsetConnected() &&
         !AFRAME.utils.device.isMobile()) { return; }
     this.controls.enabled = true;
-    el.getObject3D('camera').position.copy(oldPosition);
     if (el.hasAttribute('look-controls')) {
       el.setAttribute('look-controls', 'enabled', false);
     }
+
+    camera = el.getObject3D('camera')
+    camera.matrix.copy(this.oldMatrix);
+    camera.matrix.decompose(camera.position, camera.quaternion, camera.scale);
+
   },
 
   bindMethods: function() {
